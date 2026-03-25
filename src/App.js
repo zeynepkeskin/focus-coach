@@ -8,6 +8,17 @@ function App() {
 
   const [newDuration, setNewDuration] = useState(25); // minutes
 
+  const deleteTask = (id) => {
+  setTasks(tasks.filter(task => task.id !== id));
+
+  // If the deleted task is currently active → reset timer
+  if (id === activeTaskId) {
+    setActiveTaskId(null);
+    setIsRunning(false);
+    setTimeLeft(1500);
+  }
+};
+
   const startTimer = () => {
     if (timeLeft > 0) {
       setIsRunning(true);
@@ -132,6 +143,12 @@ function App() {
             >
               Focus
             </button>
+            <button 
+  onClick={() => deleteTask(task.id)}
+  style={{ marginLeft: "10px" }}
+>
+  Delete
+</button>
           </li>
         ))}
       </ul>
