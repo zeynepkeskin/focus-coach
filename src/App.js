@@ -2,7 +2,6 @@ import "./App.css";
 import { useState, useEffect } from "react";
 
 function App() {
-
   /* =========================
      STATE (CORE APP STATE)
   ========================= */
@@ -17,6 +16,7 @@ function App() {
 
   const [showCompletedToday, setShowCompletedToday] = useState(false); // toggle UI section
 
+  const [mode, setMode] = useState("task"); // "task" or "manual"
 
   /* =========================
      FORMAT HELPERS
@@ -27,7 +27,6 @@ function App() {
     const mins = Math.floor(seconds / 60);
     return `${mins} min`;
   };
-
 
   /* =========================
      TASK MANAGEMENT
@@ -55,7 +54,7 @@ function App() {
   const getTodayCompletedTasks = () => {
     const today = new Date();
 
-    return tasks.filter(task => {
+    return tasks.filter((task) => {
       if (!task.completed || !task.completedAt) return false;
 
       const completedDate = new Date(task.completedAt);
@@ -69,76 +68,6 @@ function App() {
   };
 
   const todayCompletedTasks = getTodayCompletedTasks();
-
-
-  /* =========================
-     SESSION / TIMER COMPLETION
-  ========================= */
-
-  const finishSession = () => {
-    setIsRunning(false);
-    setSessionComplete(true);
-
-    // If tied to a task → log session + mark complete
-    if (activeTaskId) {
-      const timeSpent =
-        (tasks.find(t => t.id === activeTaskId)?.duration || 1500) - timeLeft;
-
-      setTasks(prevTasks =>
-        prevTasks.map(task => {
-          if (task.id === activeTaskId) {
-            return {
-              ...task,
-              completed: true,
-              completedAt: new Date().toISOString(),
-
-              // Track session history
-              sessions: [
-                ...(task.sessions || []),
-                {
-                  date: new Date().toISOString(),
-                  duration: timeSpent
-                }
-              ]
-            };
-          }
-          return task;
-        })
-      );
-    }
-
-    setTimeLeft(0);
-  };
-
-
-  /* =========================
-     ANALYTICS / STATS
-  ========================= */
-
-  // Calculate total focus time today
-  const getTodayFocusTime = () => {
-    const today = new Date();
-    let total = 0;
-
-    tasks.forEach(task => {
-      if (!task.sessions) return;
-
-      task.sessions.forEach(session => {
-        const d = new Date(session.date);
-
-        if (
-          d.getFullYear() === today.getFullYear() &&
-          d.getMonth() === today.getMonth() &&
-          d.getDate() === today.getDate()
-        ) {
-          total += session.duration;
-        }
-      });
-    });
-
-    return total;
-  };
-
 
   /* =========================
      TIMER CONTROLS
@@ -168,7 +97,6 @@ function App() {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-
   /* =========================
      TIMER EFFECT (COUNTDOWN)
   ========================= */
@@ -180,7 +108,7 @@ function App() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          finishSession(); // reuse logic
+          finishSession(true); // ← pass flag
           return 0;
         }
         return prev - 1;
@@ -190,13 +118,79 @@ function App() {
     return () => clearInterval(interval);
   }, [isRunning]);
 
+  /* =========================
+     SESSION / TIMER COMPLETION
+  ========================= */
+
+  const finishSession = (completedNaturally = false) => {
+    setIsRunning(false);
+    setSessionComplete(true);
+
+    if (activeTaskId) {
+      const taskDuration =
+        tasks.find((t) => t.id === activeTaskId)?.duration || 1500;
+
+      const timeSpent = completedNaturally
+        ? taskDuration // full time
+        : taskDuration - timeLeft; // partial
+
+      setTasks((prevTasks) =>
+        prevTasks.map((task) => {
+          if (task.id === activeTaskId) {
+            return {
+              ...task,
+              completed: true,
+              completedAt: new Date().toISOString(),
+              sessions: [
+                ...(task.sessions || []),
+                {
+                  date: new Date().toISOString(),
+                  duration: timeSpent,
+                },
+              ],
+            };
+          }
+          return task;
+        }),
+      );
+    }
+
+    setTimeLeft(0);
+  };
+
+  /* =========================
+     ANALYTICS / STATS
+  ========================= */
+
+  // Calculate total focus time today
+  const getTodayFocusTime = () => {
+    const today = new Date();
+    let total = 0;
+
+    tasks.forEach((task) => {
+      if (!task.sessions) return;
+
+      task.sessions.forEach((session) => {
+        const d = new Date(session.date);
+
+        if (
+          d.getFullYear() === today.getFullYear() &&
+          d.getMonth() === today.getMonth() &&
+          d.getDate() === today.getDate()
+        ) {
+          total += session.duration;
+        }
+      });
+    });
+
+    return total;
+  };
 
   /* =========================
      TASK INPUT STATE
   ========================= */
 
   const [newTask, setNewTask] = useState("");
-
 
   /* =========================
      PERSISTENCE
@@ -206,7 +200,6 @@ function App() {
   useEffect(() => {
     localStorage.setItem("tasks", JSON.stringify(tasks));
   }, [tasks]);
-
 
   /* =========================
      TASK ACTIONS
@@ -229,7 +222,7 @@ function App() {
 
   // Toggle task completion
   const toggleTask = (id) => {
-    const updatedTasks = tasks.map(task => {
+    const updatedTasks = tasks.map((task) => {
       if (task.id === id) {
         if (task.completed) {
           // unchecking → remove timestamp
@@ -239,7 +232,7 @@ function App() {
           return {
             ...task,
             completed: true,
-            completedAt: new Date().toISOString()
+            completedAt: new Date().toISOString(),
           };
         }
       }
@@ -248,7 +241,6 @@ function App() {
 
     setTasks(updatedTasks);
   };
-
 
   /* =========================
      UI
@@ -278,7 +270,6 @@ function App() {
       />
 
       <button onClick={addTask}>Add Task</button>
-
 
       {/* TASK LIST */}
       <ul>
@@ -346,34 +337,55 @@ function App() {
         ))}
       </ul>
 
-
       {/* TIMER CONTROLS */}
+      <h2>{mode === "task" ? "Task Timer" : "Manual Timer"}</h2>
+      <div style={{ marginTop: "20px" }}>
+        <button
+          onClick={() => {
+            if (isRunning) return; // prevent switching mid-session
+            setMode("task");
+          }}
+          disabled={mode === "task"}
+        >
+          Task Mode
+        </button>
+
+        <button
+          onClick={() => {
+            if (isRunning) return; // prevent switching mid-session
+            setMode("manual");
+          }}
+          disabled={mode === "manual"}
+          style={{ marginLeft: "10px" }}
+        >
+          Manual Mode
+        </button>
+      </div>
       <div style={{ marginTop: "20px" }}>
         <div>
           {/* Manual timer input */}
-          <input
-            type="number"
-            value={manualMinutes}
-            onChange={(e) => setManualMinutes(Number(e.target.value))}
-            style={{ width: "60px" }}
-          />
 
-          <button
-            onClick={() => {
-              setActiveTaskId(null); // manual mode
-              setTimeLeft(manualMinutes * 60);
-              setSessionComplete(false);
-              setIsRunning(false);
-            }}
-          >
-            Set Timer
-          </button>
+          {mode === "manual" && (
+            <div style={{ marginTop: "10px" }}>
+              <input
+                type="number"
+                value={manualMinutes}
+                onChange={(e) => setManualMinutes(Number(e.target.value))}
+                style={{ width: "60px" }}
+              />
+              <button
+                onClick={() => {
+                  setActiveTaskId(null);
+                  setTimeLeft(manualMinutes * 60);
+                  setSessionComplete(false);
+                  setIsRunning(false);
+                }}
+              >
+                Set Timer
+              </button>
+            </div>
+          )}
         </div>
-
-        <h2>
-          Timer {activeTaskId ? "(Task Mode)" : "(Manual Mode)"}
-        </h2>
-
         <h3>{formatTime(timeLeft)}</h3>
 
         <button onClick={startTimer} disabled={isRunning}>
@@ -395,7 +407,6 @@ function App() {
         </button>
       </div>
 
-
       {/* SESSION COMPLETE MESSAGE */}
       {sessionComplete && (
         <div style={{ marginTop: "10px", color: "green", fontWeight: "bold" }}>
@@ -403,15 +414,12 @@ function App() {
         </div>
       )}
 
-
       {/* STATS */}
       <div style={{ marginTop: "20px" }}>
-        <h3>
-          Focus Time Today: {formatMinutes(getTodayFocusTime())}
-        </h3>
+        <h3>Focus Time Today: {formatMinutes(getTodayFocusTime())}</h3>
 
         <h3
-          onClick={() => setShowCompletedToday(prev => !prev)}
+          onClick={() => setShowCompletedToday((prev) => !prev)}
           style={{ cursor: "pointer" }}
         >
           Tasks Completed Today: {todayCompletedTasks.length}
@@ -420,10 +428,8 @@ function App() {
         {/* Toggle completed tasks list */}
         {showCompletedToday && (
           <ul>
-            {todayCompletedTasks.map(task => (
-              <li key={task.id}>
-                {task.title}
-              </li>
+            {todayCompletedTasks.map((task) => (
+              <li key={task.id}>{task.title}</li>
             ))}
           </ul>
         )}
