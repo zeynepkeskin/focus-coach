@@ -64,18 +64,18 @@ function App() {
   const stopTimer = () => setIsRunning(false);
 
   const resetTimer = () => {
-  setIsRunning(false);
-  setSessionComplete(false);
+    setIsRunning(false);
+    setSessionComplete(false);
 
-  if (activeTaskId) {
-    // Reset to the selected task's duration
-    const task = tasks.find((t) => t.id === activeTaskId);
-    setTimeLeft(task?.duration || 1500);
-  } else {
-    // Manual mode
-    setTimeLeft(manualMinutes * 60);
-  }
-};
+    if (activeTaskId) {
+      // Reset to the selected task's duration
+      const task = tasks.find((t) => t.id === activeTaskId);
+      setTimeLeft(task?.duration || 1500);
+    } else {
+      // Manual mode
+      setTimeLeft(manualMinutes * 60);
+    }
+  };
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -125,7 +125,7 @@ function App() {
             };
           }
           return task;
-        })
+        }),
       );
     }
 
@@ -180,41 +180,37 @@ function App() {
   ========================= */
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>tbd</h1>
+    <div className="app-container">
+      <h1>TaskFlow</h1>
 
       {/* TASK INPUT */}
-      <input
-        onKeyDown={(e) => {
-          if (e.key === "Enter") addTask();
-        }}
-        type="text"
-        placeholder="Enter a task"
-        value={newTask}
-        onChange={(e) => setNewTask(e.target.value)}
-      />
+      <div className="task-input card">
+        <input
+          onKeyDown={(e) => {
+            if (e.key === "Enter") addTask();
+          }}
+          type="text"
+          placeholder="Enter a task"
+          value={newTask}
+          onChange={(e) => setNewTask(e.target.value)}
+        />
 
-      <input
-        type="number"
-        value={newDuration}
-        onChange={(e) => setNewDuration(Number(e.target.value))}
-        style={{ width: "60px", marginLeft: "10px" }}
-      />
+        <input
+          type="number"
+          value={newDuration}
+          onChange={(e) => setNewDuration(Number(e.target.value))}
+          className="duration-input"
+        />
 
-      <button onClick={addTask}>Add Task</button>
+        <button className="primary-btn" onClick={addTask}>Add Task</button>
+      </div>
 
       {/* TASK LIST */}
-      <ul>
+      <ul className="task-list card">
         {tasks.map((task) => (
           <li
             key={task.id}
-            style={{
-              backgroundColor:
-                task.id === activeTaskId ? "#d1e7ff" : "transparent",
-              padding: "8px",
-              borderRadius: "6px",
-              marginBottom: "5px",
-            }}
+            className={`task-item ${task.id === activeTaskId ? "active" : ""}`}
           >
             <input
               type="checkbox"
@@ -222,17 +218,10 @@ function App() {
               onChange={() => toggleTask(task.id)}
             />
 
-            <span
-              style={{
-                textDecoration: task.completed ? "line-through" : "none",
-                marginLeft: "8px",
-              }}
-            >
+            <span className={task.completed ? "completed" : ""}>
               {task.title}
               {task.id === activeTaskId && (
-                <span style={{ marginLeft: "10px", fontSize: "12px", color: "blue" }}>
-                  (Focusing)
-                </span>
+                <span className="focusing-label">(Focusing)</span>
               )}
             </span>
 
@@ -245,11 +234,12 @@ function App() {
                 setIsRunning(true);
               }}
               disabled={isRunning && activeTaskId !== task.id}
+              className="secondary-btn"
             >
               Focus
             </button>
 
-            <button onClick={() => deleteTask(task.id)} style={{ marginLeft: "10px" }}>
+            <button onClick={() => deleteTask(task.id)} className="danger-btn">
               Delete
             </button>
           </li>
@@ -259,27 +249,28 @@ function App() {
       {/* TIMER */}
       <h2>{mode === "task" ? "Task Timer" : "Manual Timer"}</h2>
 
-      <div style={{ marginTop: "20px" }}>
-        <button onClick={() => !isRunning && setMode("task")} disabled={mode === "task"}>
+      <div className="mode-buttons">
+        <button
+          onClick={() => !isRunning && setMode("task")}
+          disabled={mode === "task"}
+        >
           Task Mode
         </button>
 
         <button
           onClick={() => !isRunning && setMode("manual")}
           disabled={mode === "manual"}
-          style={{ marginLeft: "10px" }}
         >
           Manual Mode
         </button>
       </div>
 
       {mode === "manual" && (
-        <div style={{ marginTop: "10px" }}>
+        <div className="manual-timer">
           <input
             type="number"
             value={manualMinutes}
             onChange={(e) => setManualMinutes(Number(e.target.value))}
-            style={{ width: "60px" }}
           />
           <button
             onClick={() => {
@@ -294,34 +285,30 @@ function App() {
         </div>
       )}
 
-      <h3>{formatTime(timeLeft)}</h3>
+      <h1 className="timer-display card">{formatTime(timeLeft)}</h1>
 
-      <button onClick={startTimer} disabled={isRunning}>
-        Start
-      </button>
-      <button onClick={stopTimer} disabled={!isRunning}>
-        Stop
-      </button>
-      <button onClick={resetTimer}>Reset</button>
-      <button
-        onClick={finishSession}
-        disabled={!isRunning || timeLeft === 0}
-        style={{ marginLeft: "10px" }}
-      >
-        Finish Early
-      </button>
+      <div className="timer-buttons">
+        <button className="primary-btn" onClick={startTimer} disabled={isRunning}>
+          Start
+        </button>
+        <button className="danger-btn" onClick={stopTimer} disabled={!isRunning}>
+          Stop
+        </button>
+        <button className="secondary-btn" onClick={resetTimer}>Reset</button>
+        <button  className="primary-btn" onClick={finishSession} disabled={!isRunning || timeLeft === 0}>
+          Finish Early
+        </button>
+      </div>
 
       {sessionComplete && (
-        <div style={{ marginTop: "10px", color: "green", fontWeight: "bold" }}>
-          Session Complete ✅
-        </div>
+        <div className="session-complete">Session Complete ✅</div>
       )}
 
       {/* TASK STATS */}
-      <div style={{ marginTop: "20px" }}>
+      <div className="stats card">
         <h3
           onClick={() => setShowCompletedToday((prev) => !prev)}
-          style={{ cursor: "pointer" }}
+          className="clickable"
         >
           Tasks Completed Today: {todayCompletedTasks.length}
         </h3>
